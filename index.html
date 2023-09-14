@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <title>CRUD ALPINE</title>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <!-- Bootstrap CSS v5.2.1 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT"
+    crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.js" defer></script>
+  <style>
+    @font-face {
+      font-family: 'Victor Mono';
+      src: url(assets/Victor_Mono/VictorMono-VariableFont_wght.ttf) format('truetype'),
+        url(assets/Victor_Mono/VictorMono-Italic-VariableFont_wght.ttf) format('truetype');
+      font-style: normal;
+      font-weight: normal;
+    }
+
+    body {
+      font-family: 'Victor Mono', monospace;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container" x-data="alpineCrud()" x-init="startEnvironment">
+    <div class="row mt-2">
+      <div class="col-md-5">
+        <div class="card">
+          <div class="card-header">
+            Empleados
+          </div>
+          <div class="card-body">
+            <form action="">
+              <div class="mb-3">
+                <label for="name" class="form-label">Nombre</label>
+                <input type="text" x-ref="nombre" name="name" id="name" x-model="name" class="form-control" placeholder="Ingrese el nombre" aria-describedby="nameId" required>
+                <small id="nameId" class="text-muted">Nombre completo del usuario</small>
+              </div>
+              <div class="mb-3">
+                <label for="email" class="form-label">Correo</label>
+                <input type="email" x-ref="correo" name="email" id="email" x-model="email" class="form-control" placeholder="Ingrese el correo" aria-describedby="emailId" required>
+                <small id="emailId" class="text-muted">Correo completo del usuario</small>
+              </div>
+              <div class="btn-group" role="group" aria-label="Button group name">
+                <button type="button" x-ref="btnAdd" class="btn btn-primary" x-on:click="save()">Guardar</button>
+                <button type="button" x-ref="btnEdit" class="btn btn-warning" x-on:click="modify()">Modificar</button>
+              </div>
+            </form>
+          </div>
+          <div class="card-footer text-muted">
+          </div>
+        </div>
+      </div>
+      <div class="col-md-7">
+        <div class="table-responsive">
+          <table class="table table-info">
+            <thead>
+              <tr>
+                <th scope="col">Id</th>
+                <th scope="col">Nombre</th>
+                <th scope="col">Correo</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="showTable" x-for="employee in employees" :key="employee.id">
+                <tr class="">
+                  <td>#<span x-text="employee.id"></span></td>
+                  <td x-text="employee.nombre"></td>
+                  <td x-text="employee.correo"></td>
+                  <td>
+                    <div class="btn-group" role="group" aria-label="actions">
+                      <button type="button" x-on:click="getOne(employee)" class="btn btn-primary">Seleccionar</button>
+                      <button type="button" x-on:click="removeemployee(employee)" class="btn btn-danger">Eliminar</button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </main>
+  <footer class="fixed-bottom">
+    <p class="text-center fw-bold">Andrés Felipe Fernández <span id="date"></span></p>
+  </footer>
+
+  <script>
+    function alpineCrud() {
+      return {
+        id: 0,
+        name: '',
+        email: '',
+        url: 'http://localhost:3000/crud.php',
+        employees: [],
+        showTable: false,
+        startEnvironment: function () {
+          this.name = '';
+          this.email = '';
+          this.getAll();
+          this.$watch('name', () => { this.$refs.nombre.classList.remove('is-invalid'); });
+          this.$watch('email', () => { this.$refs.correo.classList.remove('is-invalid'); });
+
+          this.$refs.btnAdd.disabled = false;
+          this.$refs.btnEdit.disabled = true;
+        },
+        callAPI: function (url, data) {
+          fetch(this.url + url, data)
+            .then(res => res.json())
+            .then((msgemployee) => {
+              console.log(msgemployee);
+              this.startEnvironment();
+            })
+            .catch(console.error);
+        },
+        save: function () {
+          let dataSave = { method: 'POST', body: JSON.stringify({ nombre: this.name, correo: this.email }) };
+          if (this.validateInputs()) {
+            this.callAPI('?insertar=1', dataSave);
+          }
+        },
+        modify: function () {
+          let dataSave = { method: 'POST', body: JSON.stringify({ id: this.id, nombre: this.name, correo: this.email }) };
+          if (this.validateInputs()) {
+            this.callAPI('?actualizar=1', dataSave);
+          }
+        },
+        getAll: function () {
+          fetch(this.url)
+            .then(res => res.json())
+            .then((employees) => {
+              employees = JSON.parse(JSON.stringify(employees));
+              let findemployees = employees.some((employee) => employee.hasOwnProperty('nombre'));
+              if (findemployees) {
+                this.showTable = true;
+                this.employees = employees;
+              } else {
+                this.showTable = false;
+              }
+            })
+            .catch(console.error);
+        },
+        getOne: function (employee) {
+          this.id = employee.id;
+          this.name = employee.nombre;
+          this.email = employee.correo;
+
+          this.$refs.btnAdd.disabled = true;
+          this.$refs.btnEdit.disabled = false;
+        },
+        removeemployee: function (employee) {
+          this.callAPI('?borrar=' + employee.id, null);
+        },
+        validateInputs: function () {
+          if (this.name.length > 0 && this.email.length > 0) {
+            return true;
+          }
+          this.$refs.nombre.classList.add('is-invalid');
+          this.$refs.correo.classList.add('is-invalid');
+          return false;
+        }
+      };
+    }
+  </script>
+</body>
+
+</html>
